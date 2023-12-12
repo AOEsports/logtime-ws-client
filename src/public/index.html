@@ -1,0 +1,395 @@
+<head>
+	<title>Overwatch Stats</title>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/css/mui.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-rem.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link
+		href="//cdn.muicss.com/mui-0.10.3/extra/mui-colors.min.css"
+		rel="stylesheet"
+		type="text/css"
+	/>
+	<link rel="icon" type="image/png" href="/favicon.png" />
+	<script src="//cdn.muicss.com/mui-0.10.3/extra/mui-combined.min.js"></script>
+	<style>
+		body,
+		.mui-panel {
+			background-color: #202124;
+			color: white;
+		}
+		.mui-appbar {
+			background-color: #de6f2b !important;
+		}
+		a,
+		input,
+		label {
+			color: white !important;
+		}
+	</style>
+	<script>
+		let WebSockerServer = null;
+		// load settings from localStorage on page Load
+		function loadSettings() {
+			document.getElementById("workshop").value =
+				localStorage.getItem("workshop") || "";
+			document.getElementById("websocket").value =
+				localStorage.getItem("websocket") || "";
+			console.log(`Loaded Settings from localStorage`);
+			connectToWebSocket(document.getElementById("websocket").value);
+			submitForm();
+		}
+
+		function connectToWebSocket(ip) {
+			if (WebSockerServer) {
+				WebSockerServer.close();
+			}
+
+			WebSockerServer = new WebSocket(
+				document.getElementById("websocket").value
+			);
+			WebSockerServer.onopen = function (event) {
+				console.log("Connected to websocket server");
+				// send a message to the server
+				WebSockerServer.send(
+					JSON.stringify({
+						type: "init",
+						id: "data",
+					})
+				);
+			};
+			WebSockerServer.onclose = function (event) {
+				console.log("Disconnected from websocket server");
+				const dataTargets =
+					document.getElementsByClassName("dataTarget");
+				for (let i = 0; i < dataTargets.length; i++) {
+					dataTargets[i].innerHTML = "Lost Connection";
+				}
+				// attempt to reconnect every second for the next minute
+				let attempts = 0;
+				const interval = setInterval(() => {
+					attempts++;
+					if (attempts > 60) {
+						clearInterval(interval);
+						return;
+					}
+					if (WebSockerServer.readyState == 1) {
+						clearInterval(interval);
+						return;
+					}
+					console.log(`Attempt ${attempts} to reconnect to WS`);
+					connectToWebSocket(
+						document.getElementById("websocket").value
+					);
+				}, 2000);
+				return;
+			};
+			WebSockerServer.onmessage = function (event) {
+				const parsedData = JSON.parse(event.data);
+				if (parsedData.type == "data") {
+					const data = parsedData.data;
+					if (!data.matchInformation) {
+						// reset all  dataTarget elements to "Waiting"
+						const dataTargets =
+							document.getElementsByClassName("dataTarget");
+						for (let i = 0; i < dataTargets.length; i++) {
+							dataTargets[i].innerHTML = "Waiting";
+						}
+						return;
+					}
+
+					document.getElementById("load.Map").innerHTML =
+						data.matchInformation.map;
+					document.getElementById("load.MapMode").innerHTML =
+						data.matchInformation.mode;
+					document.getElementById("load.Team1").innerHTML =
+						data.matchInformation.team_1;
+					document.getElementById("load.Team2").innerHTML =
+						data.matchInformation.team_2;
+					document.getElementById("load.RoundStatus").innerHTML =
+						data.round_status;
+
+					const serverLoad = data.server_load;
+					document.getElementById("load.Current").innerHTML =
+						serverLoad.current;
+					document.getElementById("load.Peak").innerHTML =
+						serverLoad.peak;
+					document.getElementById("load.Average").innerHTML =
+						serverLoad.average;
+
+					const parserLoad = parsedData.parser_load;
+					document.getElementById(
+						"parser.ConnectionCount"
+					).innerHTML = parserLoad.totalConnections;
+
+					document.getElementById("parser.Lines").innerHTML =
+						parserLoad.lineCount;
+
+					document.getElementById(
+						"parser.ParseTime"
+					).innerHTML = `${parserLoad.parseTime}ms`;
+
+					document.getElementById("parser.CurrentFile").innerHTML =
+						parserLoad.fileName
+							.replace("Log-", "")
+							.replace(".txt", "");
+				}
+			};
+		}
+
+		function submitForm(e) {
+			// submit form to the /submit endpoint
+			if (e) e.preventDefault();
+			fetch("/submit", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					workshop: document.getElementById("workshop").value,
+					websocket: document.getElementById("websocket").value,
+				}),
+			})
+				.then((res) => res.text())
+				.then((text) => {
+					if (text !== "true") {
+						alert(text);
+					} else {
+						// change saveButton text to "Saved"
+						document.getElementById("saveButton").innerHTML =
+							"Saved";
+
+						// save the good settings to localStorage
+						localStorage.setItem(
+							"workshop",
+							document.getElementById("workshop").value
+						);
+						localStorage.setItem(
+							"websocket",
+							document.getElementById("websocket").value
+						);
+						connectToWebSocket(
+							document.getElementById("websocket").value
+						);
+					}
+				});
+		}
+	</script>
+</head>
+<body onload="loadSettings()" style="color-scheme: dark">
+	<div class="mui-appbar mui-container-fluid" style="margin-bottom: 2rem">
+		<div class="mui--text-display2 mui-row">
+			<span
+				class="mui-col-md-2"
+				style="
+					padding-right: 4rem;
+					padding-left: 2rem;
+					padding-top: 0.2rem;
+					display: inline-block;
+				"
+			>
+				<image src="/favicon.png" height="48px" /> </span
+			><span class="mui-col-md-4">LogTime WS Parser</span>
+		</div>
+	</div>
+	<div class="mui-container">
+		<div class="mui-panel">
+			<form
+				style="
+					display: flex;
+					flex-direction: column;
+					gap: 4px;
+					padding: 2px;
+				"
+			>
+				<div class="mui-textfield">
+					<input
+						id="workshop"
+						name="workshop"
+						type="text"
+						placeholder="C:\Documents\Overwatch\Workshop"
+						required
+					/>
+					<label for="workshop"
+						>Direct Path to your \Documents\Overwatch\Workshop
+						folder</label
+					>
+				</div>
+
+				<div class="mui-textfield">
+					<input
+						id="websocket"
+						name="websocket"
+						type="text"
+						placeholder="ws://localhost:3000"
+						required
+					/>
+					<label for="websocket">WebSocket Server Target IP</label>
+				</div>
+				<button
+					type="submit"
+					class="mui-btn mui-btn--primary mui-btn--raised"
+					onclick="submitForm(event)"
+					id="saveButton"
+				>
+					Save
+				</button>
+			</form>
+		</div>
+		<div class="mui-panel">
+			<ul class="mui-tabs__bar">
+				<li class="mui--is-active">
+					<a data-mui-toggle="tab" data-mui-controls="ow-match-info"
+						>Overwatch Match Information</a
+					>
+				</li>
+				<li>
+					<a data-mui-toggle="tab" data-mui-controls="ow-server-load"
+						>Overwatch Server Load</a
+					>
+				</li>
+				<li>
+					<a
+						data-mui-toggle="tab"
+						data-mui-controls="parser-server-load"
+						>Parser Server Load</a
+					>
+				</li>
+			</ul>
+			<div class="mui-tabs__pane mui--is-active" id="ow-match-info">
+				<div class="mui--text-display2">
+					Overwatch Match Information
+				</div>
+				<div class="mui--text-body1 mui-row">
+					<div class="mui--text-display1 mui-col-md-4">
+						Map
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Map"
+						>
+							Waiting
+						</div>
+					</div>
+
+					<div class="mui--text-display1 mui-col-md-4">
+						Team 1
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Team1"
+						>
+							Waiting
+						</div>
+					</div>
+					<div class="mui--text-display1 mui-col-md-4">
+						Team 2
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Team2"
+						>
+							Waiting
+						</div>
+					</div>
+					<div class="mui--text-display1 mui-col-md-4">
+						Mode
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.MapMode"
+						>
+							Waiting
+						</div>
+					</div>
+
+					<div class="mui--text-display1 mui-col-md-4">
+						Round Status
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.RoundStatus"
+						>
+							Waiting
+						</div>
+					</div>
+
+					<div class="mui--text-display1 mui-col-md-4">
+						Match ID
+						<div
+							class="mui--text-headline dataTarget"
+							id="parser.CurrentFile"
+						>
+							Waiting
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="mui-tabs__pane" id="ow-server-load">
+				<div class="mui--text-display2">Overwatch Server Load</div>
+				<div class="mui--text-body1 mui-row">
+					<div class="mui--text-display1 mui-col-md-4">
+						Current
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Current"
+						>
+							Waiting
+						</div>
+					</div>
+
+					<div class="mui--text-display1 mui-col-md-4">
+						Peak
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Peak"
+						>
+							Waiting
+						</div>
+					</div>
+					<div class="mui--text-display1 mui-col-md-4">
+						Average
+						<div
+							class="mui--text-headline dataTarget"
+							id="load.Average"
+						>
+							Waiting
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="mui-tabs__pane" id="parser-server-load">
+				<div class="mui--text-display2">Parser Server Load</div>
+				<div class="mui--text-body1 mui-row">
+					<div class="mui--text-display1 mui-col-md-4">
+						Connections
+						<div
+							class="mui--text-headline dataTarget"
+							id="parser.ConnectionCount"
+						>
+							Waiting
+						</div>
+					</div>
+					<div class="mui--text-display1 mui-col-md-4">
+						Lines
+						<div
+							class="mui--text-headline dataTarget"
+							id="parser.Lines"
+						>
+							Waiting
+						</div>
+					</div>
+					<div class="mui--text-display1 mui-col-md-4">
+						Last Time to Parse
+						<div
+							class="mui--text-headline dataTarget"
+							id="parser.ParseTime"
+						>
+							Waiting
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
