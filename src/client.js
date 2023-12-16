@@ -30,6 +30,18 @@ function connectToWs() {
 		);
 		WS_CONNECTION.send(JSON.stringify({ reset: true }));
 	};
+	WS_CONNECTION.onmessage = (message) => {
+		message = JSON.parse(message.data);
+		// ping
+		if (message.type === "ping") {
+			WS_CONNECTION.send(
+				JSON.stringify({
+					type: "pong",
+				})
+			);
+			return;
+		}
+	};
 	WS_CONNECTION.onclose = () => {
 		console.log(`Disconnected from ${WEB_SERVER}`);
 		if (RECONNECTING) return;
@@ -80,14 +92,11 @@ const app = express()
 			return res.status(400).send(`invalid directory`);
 		}
 		DIRECTORY = body.workshop;
-		console.log(DIRECTORY);
 		const file = getMostRecentFileName(DIRECTORY);
-		console.log(file);
 		LOG_FILE = file;
 		LAST_LINE_READ = 0;
 		res.send(true);
 	})
-	.get("/submit", () => new Response("POST"))
 	.listen(3001);
 
 console.log(`WebServer is running at http://localhost:3001`);
@@ -106,7 +115,7 @@ const getMostRecentFileName = (dir) => {
 	});
 };
 
-setInterval(() => {
+setInterval(async () => {
 	if (LOG_FILE === null) return;
 	if (WS_CONNECTION === null) return;
 	if (WS_CONNECTION.readyState !== 1) return;
@@ -120,17 +129,17 @@ setInterval(() => {
 
 	const file = path.join(DIRECTORY, LOG_FILE);
 	const data = fs.readFileSync(file, "utf8");
-	const lines = data.split("\n");
+	const lines = data.split("\n").filter((line) => line.trim() !== "");
 	// send all lines from the last line read to the end of the file to the WS server
-	if (WS_CONNECTION !== null) {
-		// check connected
-		if (WS_CONNECTION.readyState !== 1) return;
-		const linesToSend = lines.slice(LAST_LINE_READ);
+	if (WS_CONNECTION !== null && WS_CONNECTION.readyState == 1) {
+		let linesToSend = lines.slice(LAST_LINE_READ);
+
 		if (linesToSend.length === 0) return;
+
 		WS_CONNECTION.send(
 			JSON.stringify({
 				msg: "lines",
-				matchLines: lines.slice(LAST_LINE_READ),
+				matchLines: linesToSend,
 				lineCount: linesToSend.length,
 				totalLineCount: lines.length,
 				fileName: LOG_FILE,
