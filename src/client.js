@@ -1,9 +1,9 @@
+import express from "express";
 import fs from "fs";
 import path from "path";
 import * as _ from "underscore";
-import express from "express";
 import WebSocket from "ws";
-import { setTimeout } from "timers/promises";
+import chokidar from "chokidar";
 
 let DIRECTORY = null;
 let LOG_FILE = null;
@@ -92,9 +92,6 @@ const app = express()
 			return res.status(400).send(`invalid directory`);
 		}
 		DIRECTORY = body.workshop;
-		const file = getMostRecentFileName(DIRECTORY);
-		LOG_FILE = file;
-		LAST_LINE_READ = 0;
 		res.send(true);
 	})
 	.listen(3001);
@@ -115,8 +112,9 @@ const getMostRecentFileName = (dir) => {
 	});
 };
 
+let ChokidarFileWatcher = null;
+
 setInterval(async () => {
-	if (LOG_FILE === null) return;
 	if (WS_CONNECTION === null) return;
 	if (WS_CONNECTION.readyState !== 1) return;
 
@@ -125,26 +123,37 @@ setInterval(async () => {
 		console.log(`New file found: ${fileCheck}`);
 		LOG_FILE = fileCheck;
 		LAST_LINE_READ = 0;
+		// kill the watcher
+		if (ChokidarFileWatcher !== null) {
+			ChokidarFileWatcher.close();
+			ChokidarFileWatcher = null;
+		}
+		const file = path.join(DIRECTORY, LOG_FILE);
+
+		function handleChange(path) {
+			console.log(`File changed: ${path}`);
+			const data = fs.readFileSync(file, "utf8");
+			const lines = data.split("\n").filter((line) => line.trim() !== "");
+			if (WS_CONNECTION !== null && WS_CONNECTION.readyState == 1) {
+				let linesToSend = lines.slice(LAST_LINE_READ);
+
+				if (linesToSend.length === 0) return;
+
+				WS_CONNECTION.send(
+					JSON.stringify({
+						msg: "lines",
+						matchLines: linesToSend,
+						lineCount: linesToSend.length,
+						totalLineCount: lines.length,
+						fileName: LOG_FILE,
+					})
+				);
+				LAST_LINE_READ = lines.length;
+			}
+		}
+
+		// start the watcher
+		ChokidarFileWatcher = chokidar.watch(path.join(DIRECTORY, LOG_FILE));
+		ChokidarFileWatcher.on("change", handleChange).on("add", handleChange);
 	}
-
-	const file = path.join(DIRECTORY, LOG_FILE);
-	const data = fs.readFileSync(file, "utf8");
-	const lines = data.split("\n").filter((line) => line.trim() !== "");
-	// send all lines from the last line read to the end of the file to the WS server
-	if (WS_CONNECTION !== null && WS_CONNECTION.readyState == 1) {
-		let linesToSend = lines.slice(LAST_LINE_READ);
-
-		if (linesToSend.length === 0) return;
-
-		WS_CONNECTION.send(
-			JSON.stringify({
-				msg: "lines",
-				matchLines: linesToSend,
-				lineCount: linesToSend.length,
-				totalLineCount: lines.length,
-				fileName: LOG_FILE,
-			})
-		);
-		LAST_LINE_READ = lines.length;
-	}
-}, 1000);
+}, 5000);

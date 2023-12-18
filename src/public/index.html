@@ -34,6 +34,7 @@
 	</style>
 	<script>
 		let WebSockerServer = null;
+		let Reconnecting = false;
 		// load settings from localStorage on page Load
 		function loadSettings() {
 			document.getElementById("workshop").value =
@@ -55,6 +56,7 @@
 			);
 			WebSockerServer.onopen = function (event) {
 				console.log("Connected to websocket server");
+				Reconnecting = false;
 				// send a message to the server
 				WebSockerServer.send(
 					JSON.stringify({
@@ -70,6 +72,8 @@
 				for (let i = 0; i < dataTargets.length; i++) {
 					dataTargets[i].innerHTML = "Lost Connection";
 				}
+				if (Reconnecting) return;
+				Reconnecting = true;
 				// attempt to reconnect every second for the next minute
 				let attempts = 0;
 				const interval = setInterval(() => {
