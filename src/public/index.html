@@ -41,6 +41,12 @@
 				localStorage.getItem("workshop") || "";
 			document.getElementById("websocket").value =
 				localStorage.getItem("websocket") || "";
+			// user pass
+			document.getElementById("websocketUser").value =
+				localStorage.getItem("websocketUser") || "";
+			document.getElementById("websocketPass").value =
+				localStorage.getItem("websocketPass") || "";
+
 			console.log(`Loaded Settings from localStorage`);
 			connectToWebSocket(document.getElementById("websocket").value);
 			submitForm();
@@ -157,6 +163,10 @@
 				body: JSON.stringify({
 					workshop: document.getElementById("workshop").value,
 					websocket: document.getElementById("websocket").value,
+					websocketUser: document.getElementById("websocketUser")
+						.value,
+					websocketPass: document.getElementById("websocketPass")
+						.value,
 				}),
 			})
 				.then((res) => res.text())
@@ -176,6 +186,14 @@
 						localStorage.setItem(
 							"websocket",
 							document.getElementById("websocket").value
+						);
+						localStorage.setItem(
+							"websocketUser",
+							document.getElementById("websocketUser").value
+						);
+						localStorage.setItem(
+							"websocketPass",
+							document.getElementById("websocketPass").value
 						);
 						connectToWebSocket(
 							document.getElementById("websocket").value
@@ -223,6 +241,27 @@
 						>Direct Path to your \Documents\Overwatch\Workshop
 						folder</label
 					>
+				</div>
+
+				<div class="mui-textfield">
+					<div class="mui-textfield">
+						<input
+							id="websocketUser"
+							name="websocketUser"
+							type="text"
+							placeholder="admin"
+						/>
+						<label for="websocketUser">WebSocket Server Target Username</label>
+					</div>
+					<div class="mui-textfield">
+						<input
+							id="websocketPass"
+							name="websocketPass"
+							type="text"
+							placeholder="password"
+						/>
+						<label for="websocketPass">WebSocket Server Target Password</label>
+					</div>
 				</div>
 
 				<div class="mui-textfield">
