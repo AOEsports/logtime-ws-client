@@ -1,4 +1,4 @@
-# Host for the LogTime WS Project
+# User Client for the LogTime WS Project
 
 This program should be ran by the Lobby Owner. It will create a server that will listen for connections from the client. The client will send their log files to the server, which will then be saved to a file on the server.
 
