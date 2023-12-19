@@ -1,1 +1,10 @@
-# logtime-ws-host
+# Host for the LogTime WS Project
+
+This program should be ran by the Lobby Owner. It will create a server that will listen for connections from the client. The client will send their log files to the server, which will then be saved to a file on the server.
+
+## Usage
+
+**Required Workshop Code**: `68R7XR`
+Workshop code is a modified version of LogTime.
+
+Download the prebuilt release, and run it. It will open up Port **3001**. Navigate to http://localhost:3001 and it will ask for the path to your Workshop Logs folder. This is usually located at `C:\Users\<username>\Documents\Overwatch\Workshop`. Once you have selected the folder, it will start watching the folder for new files, and watch the most recent file for changes.
