@@ -10,4 +10,4 @@ Workshop code is a modified version of LogTime.
 Download the prebuilt release, and run it. It will open up Port **3001**. Navigate to http://localhost:3001 and it will ask for the path to your Workshop Logs folder. This is usually located at `C:\Users\<username>\Documents\Overwatch\Workshop`. Once you have selected the folder, it will start watching the folder for new files, and watch the most recent file for changes.
 
 ## Help?
-The project is provided "as is". Users are expected to have some level to knowledge for NJS. Any breaking issues, open an issue!
+The project is provided "as is". Users are expected to have some level to knowledge for NJS. Any breaking issues, open an issue, or join the [Discord for one of my bots and post to "logtime-support"](https://discord.gg/PmhFBntf8N)
