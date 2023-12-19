@@ -41,14 +41,8 @@
 				localStorage.getItem("workshop") || "";
 			document.getElementById("websocket").value =
 				localStorage.getItem("websocket") || "";
-			// user pass
-			document.getElementById("websocketUser").value =
-				localStorage.getItem("websocketUser") || "";
-			document.getElementById("websocketPass").value =
-				localStorage.getItem("websocketPass") || "";
 
 			console.log(`Loaded Settings from localStorage`);
-			connectToWebSocket(document.getElementById("websocket").value);
 			submitForm();
 		}
 
@@ -56,10 +50,18 @@
 			if (WebSockerServer) {
 				WebSockerServer.close();
 			}
-
+			console.log(`Connecting to ${ip}`);
 			WebSockerServer = new WebSocket(
 				document.getElementById("websocket").value
 			);
+			WebSockerServer.onerror = function (event) {
+				console.log("Error connecting to websocket server", event);
+				const dataTargets =
+					document.getElementsByClassName("dataTarget");
+				for (let i = 0; i < dataTargets.length; i++) {
+					dataTargets[i].innerHTML = "Error Connecting";
+				}
+			};
 			WebSockerServer.onopen = function (event) {
 				console.log("Connected to websocket server");
 				Reconnecting = false;
@@ -72,7 +74,7 @@
 				);
 			};
 			WebSockerServer.onclose = function (event) {
-				console.log("Disconnected from websocket server");
+				console.log("Disconnected from websocket server", event);
 				const dataTargets =
 					document.getElementsByClassName("dataTarget");
 				for (let i = 0; i < dataTargets.length; i++) {
@@ -83,6 +85,8 @@
 				// attempt to reconnect every second for the next minute
 				let attempts = 0;
 				const interval = setInterval(() => {
+					console.log(WebSockerServer.readyState == 0)
+					if (WebSockerServer.readyState == 0) return;
 					attempts++;
 					if (attempts > 60) {
 						clearInterval(interval);
@@ -163,10 +167,6 @@
 				body: JSON.stringify({
 					workshop: document.getElementById("workshop").value,
 					websocket: document.getElementById("websocket").value,
-					websocketUser: document.getElementById("websocketUser")
-						.value,
-					websocketPass: document.getElementById("websocketPass")
-						.value,
 				}),
 			})
 				.then((res) => res.text())
@@ -186,14 +186,6 @@
 						localStorage.setItem(
 							"websocket",
 							document.getElementById("websocket").value
-						);
-						localStorage.setItem(
-							"websocketUser",
-							document.getElementById("websocketUser").value
-						);
-						localStorage.setItem(
-							"websocketPass",
-							document.getElementById("websocketPass").value
 						);
 						connectToWebSocket(
 							document.getElementById("websocket").value
@@ -241,27 +233,6 @@
 						>Direct Path to your \Documents\Overwatch\Workshop
 						folder</label
 					>
-				</div>
-
-				<div class="mui-textfield">
-					<div class="mui-textfield">
-						<input
-							id="websocketUser"
-							name="websocketUser"
-							type="text"
-							placeholder="admin"
-						/>
-						<label for="websocketUser">WebSocket Server Target Username</label>
-					</div>
-					<div class="mui-textfield">
-						<input
-							id="websocketPass"
-							name="websocketPass"
-							type="text"
-							placeholder="password"
-						/>
-						<label for="websocketPass">WebSocket Server Target Password</label>
-					</div>
 				</div>
 
 				<div class="mui-textfield">

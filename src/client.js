@@ -4,7 +4,6 @@ import path from "path";
 import * as _ from "underscore";
 import WebSocket from "ws";
 import chokidar from "chokidar";
-import fetch from "node-fetch";
 
 let DIRECTORY = null;
 let LOG_FILE = null;
@@ -14,72 +13,17 @@ let WEB_SERVER_AUTH = { user: null, pass: null };
 let WS_CONNECTION = null;
 let RECONNECTING = false;
 
-let AUTHENTICATED = false;
-
-function startConnectToWs() {
-	AUTHENTICATED = false;
-	if (WEB_SERVER_AUTH.user != null) {
-		const credentials = btoa(
-			`${WEB_SERVER_AUTH.user}:${WEB_SERVER_AUTH.pass}`
-		);
-		// replace wss, ws with https
-		const HTTP_WEB_SERVER = WEB_SERVER.replace(
-			"wss://",
-			"https://"
-		).replace("ws://", "https://");
-		const canContinue = fetch(HTTP_WEB_SERVER, {
-			headers: {
-				Authorization: "Basic " + credentials,
-			},
-		})
-			.then((response) => {
-				if (!response.ok) {
-					throw new Error("Authentication failed");
-				}
-				return response.text();
-			})
-			.then((data) => {
-				console.log("Authentication successful:", data);
-				// Now, proceed to WebSocket connection
-				AUTHENTICATED = true;
-				connectToWs();
-				return true;
-			})
-			.catch((error) => {
-				console.error("Authentication error:", error);
-				return false;
-			});
-		AUTHENTICATED = canContinue;
-		if (!canContinue) throw "Authentication Failed";
-		return;
-	}
-	AUTHENTICATED = true;
-	connectToWs();
-}
-
 function connectToWs() {
-	if (!AUTHENTICATED) {
-		startConnectToWs();
-		return;
-	}
 	console.log(`Connecting to the WebServer`);
 	if (WS_CONNECTION) {
+		console.log(`Closing previous connection`);
 		WS_CONNECTION.close();
 	}
-	const credentials = `${WEB_SERVER_AUTH.user}:${WEB_SERVER_AUTH.pass}`;
-	const useCredentials = WEB_SERVER_AUTH.user != null;
-	let TEMPORARY_WS = WEB_SERVER;
-	if (useCredentials) {
-		// modify WEB_SERVER to use wss, and include the credentials
-		TEMPORARY_WS = TEMPORARY_WS.replace("ws://", "").replace("wss://", "");
-		TEMPORARY_WS = `wss://${credentials}@${TEMPORARY_WS}`;
-		console.log(`USING`, TEMPORARY_WS);
-	}
-	WS_CONNECTION = new WebSocket(TEMPORARY_WS);
+	WS_CONNECTION = new WebSocket(WS_CONNECTION);
 
 	// connect to the WS server
 	WS_CONNECTION.onopen = (ws) => {
-		console.log(`Connected to ${TEMPORARY_WS}`);
+		console.log(`Connected to ${WS_CONNECTION}`);
 		WS_CONNECTION.send(
 			JSON.stringify({
 				type: "init",
@@ -108,6 +52,7 @@ function connectToWs() {
 		// attempt to reconnect every second for the next minute
 		let reconnectAttempts = 0;
 		const reconnectInterval = setInterval(() => {
+			if (WS_CONNECTION && WS_CONNECTION.readyState == 0) return;
 			if (reconnectAttempts > 60) {
 				clearInterval(reconnectInterval);
 				RECONNECTING = false;
@@ -143,7 +88,7 @@ const app = express()
 			pass: body.websocketPass,
 		};
 		console.log(`WebSocket Server is running at ${WEB_SERVER}`);
-		startConnectToWs();
+		connectToWs();
 
 		if ("workshop" in body === false)
 			return res.status(400).send(`no workshop`);
