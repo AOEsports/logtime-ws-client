@@ -159,6 +159,16 @@
 		function submitForm(e) {
 			// submit form to the /submit endpoint
 			if (e) e.preventDefault();
+
+			// check that the inputs arent empty
+			if (
+				document.getElementById("workshop").value == "" ||
+				document.getElementById("websocket").value == ""
+			) {
+				alert("Please fill out all fields");
+				return;
+			}
+
 			fetch("/submit", {
 				method: "POST",
 				headers: {

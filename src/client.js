@@ -76,7 +76,7 @@ function connectToWs() {
 }
 
 const app = express()
-	.use(express.static("src/public"))
+	.use(express.static("public"))
 	.use(express.json())
 	.post("/submit", async ({ body }, res) => {
 		if (body === null) return res.status(400).send(`no data`);
