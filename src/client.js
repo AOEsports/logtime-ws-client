@@ -19,11 +19,11 @@ function connectToWs() {
 		console.log(`Closing previous connection`);
 		WS_CONNECTION.close();
 	}
-	WS_CONNECTION = new WebSocket(WS_CONNECTION);
+	WS_CONNECTION = new WebSocket(WEB_SERVER);
 
 	// connect to the WS server
 	WS_CONNECTION.onopen = (ws) => {
-		console.log(`Connected to ${WS_CONNECTION}`);
+		console.log(`Connected to ${WEB_SERVER}`);
 		WS_CONNECTION.send(
 			JSON.stringify({
 				type: "init",
