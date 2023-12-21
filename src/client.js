@@ -9,9 +9,15 @@ let DIRECTORY = null;
 let LOG_FILE = null;
 let LAST_LINE_READ = 0;
 let WEB_SERVER = null;
-let WEB_SERVER_AUTH = { user: null, pass: null };
 let WS_CONNECTION = null;
 let RECONNECTING = false;
+
+const READY_STATE_TO_STRING = {
+	0: "CONNECTING",
+	1: "OPEN",
+	2: "CLOSING",
+	3: "CLOSED",
+};
 
 function connectToWs() {
 	console.log(`Connecting to the WebServer`);
@@ -36,6 +42,7 @@ function connectToWs() {
 		message = JSON.parse(message.data);
 		// ping
 		if (message.type === "ping") {
+			// respond to parent pings, with a pong!
 			WS_CONNECTION.send(
 				JSON.stringify({
 					type: "pong",
@@ -52,13 +59,20 @@ function connectToWs() {
 		// attempt to reconnect every second for the next minute
 		let reconnectAttempts = 0;
 		const reconnectInterval = setInterval(() => {
-			if (WS_CONNECTION && WS_CONNECTION.readyState == 0) return;
+			if (WS_CONNECTION && WS_CONNECTION.readyState == 0) {
+				console.log(`Already attempting to reconnect`);
+				return;
+			}
 			if (reconnectAttempts > 60) {
+				console.log(
+					`Failed to reconnect to ${WEB_SERVER} after 60 attempts`
+				);
 				clearInterval(reconnectInterval);
 				RECONNECTING = false;
 				return;
 			}
 			if (WS_CONNECTION.readyState == 1) {
+				console.log(`Reconnected to ${WEB_SERVER}`);
 				clearInterval(reconnectInterval);
 				RECONNECTING = false;
 				return;
@@ -122,8 +136,17 @@ const getMostRecentFileName = (dir) => {
 let ChokidarFileWatcher = null;
 
 setInterval(async () => {
-	if (WS_CONNECTION === null) return;
-	if (WS_CONNECTION.readyState !== 1) return;
+	if (WS_CONNECTION === null) {
+		console.log(`Skipping file check, no WS_CONNECTION`);
+		return;
+	}
+	if (WS_CONNECTION.readyState !== 1) {
+		console.log(
+			`Skipping file check, WS_CONNECTION not ready. (We want readyState = 1, we got ${WS_CONNECTION.readyState})`,
+			READY_STATE_TO_STRING[WS_CONNECTION.readyState]
+		);
+		return;
+	}
 
 	const fileCheck = getMostRecentFileName(DIRECTORY);
 	if (fileCheck !== LOG_FILE) {
