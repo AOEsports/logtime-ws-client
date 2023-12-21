@@ -186,3 +186,5 @@ logtime-ws-client-linux
 logtime-ws-client-macos
 
 logtime-ws-client-win.exe
+
+*.exe
