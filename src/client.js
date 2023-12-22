@@ -97,10 +97,6 @@ const app = express()
 		if ("websocket" in body === false)
 			return res.status(400).send(`no websocket`);
 		WEB_SERVER = body.websocket;
-		WEB_SERVER_AUTH = {
-			user: body.websocketUser,
-			pass: body.websocketPass,
-		};
 		console.log(`WebSocket Server is running at ${WEB_SERVER}`);
 		connectToWs();
 
