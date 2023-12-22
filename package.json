@@ -8,7 +8,8 @@
 	"scripts": {
 		"start": "node src/client.js",
 		"build": "npx babel src --out-dir dist --copy-files",
-		"compile": "pkg . --options max-old-space-size=1024,tls-min-v1.0,expose-gc -t node18-win-x64"
+		"compile": "pkg . --options max-old-space-size=1024,tls-min-v1.0,expose-gc -t node18-win-x64",
+		"dist": "npm run build && npm run compile"
 	},
 	"bin": "dist/client.js",
 	"dependencies": {

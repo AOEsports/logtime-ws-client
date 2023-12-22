@@ -179,7 +179,11 @@ setInterval(async () => {
 		}
 
 		// start the watcher
-		ChokidarFileWatcher = chokidar.watch(path.join(DIRECTORY, LOG_FILE));
+		const fileToWatch = path.join(DIRECTORY, LOG_FILE);
+		console.log(`Watching`, fileToWatch);
+		ChokidarFileWatcher = chokidar.watch(fileToWatch, {
+			usePolling: true,
+		});
 		ChokidarFileWatcher.on("change", handleChange).on("add", handleChange);
 	}
 }, 5000);
