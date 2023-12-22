@@ -6,7 +6,7 @@ This program should be ran by the Lobby Owner. It will create a server that will
 
 ## Usage
 
-**Download the [https://github.com/AOEsports/logtime-ws-client/releases/latest](latest release - usually called `logtime-ws-client.zip`).** Extract the executable and public folder to a folder, and run the executable. 👍
+**Download the [latest release - usually called `logtime-ws-client.zip`](https://github.com/AOEsports/logtime-ws-client/releases/latest).** Extract the executable and public folder to a folder, and run the executable. 👍
 
 ### **Required Workshop Code**:
 
